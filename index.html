@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>파이 실습실</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,6 +44,7 @@
 }
 * { box-sizing: border-box; }
 body {
+  margin: 0;
   background: var(--bg); color: var(--ink); font-family: var(--f-body);
   font-size: 15px; line-height: 1.65; word-break: keep-all; overflow-wrap: anywhere;
 }
@@ -207,6 +213,8 @@ footer { color: var(--muted); font-size: 13px; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
+</head>
+<body>
 
 <header class="top">
   <div class="wrap">
@@ -671,3 +679,5 @@ app.run(host="0.0.0.0", port=5000)`,
   showLab(start); updateProgress();
 })();
 </script>
+</body>
+</html>
