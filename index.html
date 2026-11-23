@@ -1,0 +1,673 @@
+<title>파이 실습실</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 한 열 작업대. 위에 고정 탭, 실습마다 [배선 핀맵 | 순서] 2단 → 폰에서는 1단 */
+:root {
+  --bg: #eef3ee;
+  --surface: #ffffff;
+  --ink: #16241b;
+  --muted: #56685c;
+  --line: #d3ddd5;
+  --board: #0f4a30;
+  --board-ink: #d9efe1;
+  --copper: #b8611e;
+  --copper-soft: #f6e6d6;
+  --code-bg: #14201a;
+  --code-ink: #dbe9df;
+  --ok: #1f7a46;
+  --warn: #a5560f;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0c130f; --surface: #131e17; --ink: #e2ebe4; --muted: #92a597; --line: #24352a;
+    --board: #0a3a25; --board-ink: #cfe8d8; --copper: #e5944f; --copper-soft: #2e2116;
+    --code-bg: #08100b; --code-ink: #d6e6da; --ok: #4fbf7d; --warn: #e3a35a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c130f; --surface: #131e17; --ink: #e2ebe4; --muted: #92a597; --line: #24352a;
+  --board: #0a3a25; --board-ink: #cfe8d8; --copper: #e5944f; --copper-soft: #2e2116;
+  --code-bg: #08100b; --code-ink: #d6e6da; --ok: #4fbf7d; --warn: #e3a35a;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body);
+  font-size: 15px; line-height: 1.65; word-break: keep-all; overflow-wrap: anywhere;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--board); }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1, h2, h3 { line-height: 1.3; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+code, pre, .mono { font-family: var(--f-mono); }
+:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+
+/* 헤더 */
+header.top { background: var(--board); color: var(--board-ink); }
+header.top .wrap { padding-block: 22px 18px; display: grid; gap: 14px; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-size: clamp(1.5rem, 4.5vw, 2.1rem); font-weight: 700; letter-spacing: -0.01em; }
+.brand .tag { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; opacity: .75; }
+.lede { max-width: 62ch; opacity: .9; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--f-mono); font-size: 12.5px; }
+.flow span { border: 1px solid color-mix(in srgb, var(--board-ink) 35%, transparent); padding: 3px 9px; border-radius: 999px; }
+.flow i { font-style: normal; opacity: .6; }
+
+nav.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+nav.tabs .wrap { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs a {
+  flex: none; padding: 12px 14px; color: var(--muted); text-decoration: none; font-weight: 500;
+  border-bottom: 2px solid transparent; white-space: nowrap;
+}
+nav.tabs a:hover { color: var(--ink); }
+nav.tabs a.on { color: var(--ink); border-bottom-color: var(--copper); }
+
+main .wrap { padding-block: 28px 64px; display: grid; gap: 48px; }
+section { display: grid; gap: 18px; scroll-margin-top: 64px; }
+.sec-head { display: grid; gap: 6px; }
+.sec-head h2 { font-size: 1.35rem; }
+.sec-head p { color: var(--muted); max-width: 65ch; }
+.eyebrow { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--copper); }
+
+/* 내 파이 설정 */
+.conn { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; }
+.conn-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.field { display: grid; gap: 4px; flex: 1 1 180px; }
+.field label { font-size: 12.5px; color: var(--muted); }
+.field input {
+  font: 500 15px var(--f-mono); padding: 9px 11px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%;
+}
+.hint { font-size: 13px; color: var(--muted); }
+
+/* 준비 단계 */
+.steps { display: grid; gap: 14px; counter-reset: s; }
+.step { display: grid; grid-template-columns: 34px 1fr; gap: 12px; }
+.step .n {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--copper-soft); color: var(--copper); font: 600 14px var(--f-mono);
+}
+.step .body { display: grid; gap: 8px; min-width: 0; }
+.step h3 { font-size: 1.05rem; padding-top: 4px; }
+.step p { color: var(--muted); }
+
+/* 코드 */
+.code { position: relative; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; min-width: 0; }
+.code pre { margin: 0; padding: 12px 14px; padding-right: 64px; overflow-x: auto; font-size: 13px; line-height: 1.55; }
+.code .label { position: absolute; top: -9px; left: 10px; font: 600 10.5px var(--f-mono); letter-spacing: .08em; background: var(--copper); color: #fff; padding: 1px 7px; border-radius: 4px; }
+.code.has-label pre { padding-top: 16px; }
+.copy {
+  position: absolute; top: 7px; right: 7px; font: 500 12px var(--f-body);
+  background: color-mix(in srgb, var(--code-ink) 12%, transparent); color: var(--code-ink);
+  border: 0; border-radius: 6px; padding: 5px 9px; cursor: pointer;
+}
+.copy:hover { background: color-mix(in srgb, var(--code-ink) 22%, transparent); }
+.prompt { background: var(--copper-soft); border: 1px solid color-mix(in srgb, var(--copper) 35%, transparent); color: var(--ink); border-radius: 8px; position: relative; }
+.prompt p { padding: 14px 70px 14px 14px; }
+.prompt .copy { background: var(--copper); color: #fff; }
+.prompt .who { display: block; font: 600 11px var(--f-mono); letter-spacing: .08em; color: var(--copper); margin-bottom: 4px; }
+
+/* 실습 선택 */
+.picker { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.chip {
+  flex: none; display: grid; gap: 2px; text-align: left; min-width: 132px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  border-radius: var(--r); padding: 10px 12px; cursor: pointer; font: inherit;
+}
+.chip small { font-family: var(--f-mono); font-size: 11px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.chip b { font-weight: 600; font-size: 14px; }
+.chip.on { border-color: var(--copper); box-shadow: inset 0 0 0 1px var(--copper); }
+.chip .done { color: var(--ok); }
+
+.lab { display: grid; grid-template-columns: minmax(260px, 330px) 1fr; gap: 22px; align-items: start; }
+@media (max-width: 760px) { .lab { grid-template-columns: 1fr; } }
+.lab-main { display: grid; gap: 18px; min-width: 0; }
+.lab-title { display: grid; gap: 6px; }
+.lab-title h3 { font-size: 1.3rem; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.pill.lv { color: var(--copper); border-color: color-mix(in srgb, var(--copper) 40%, transparent); }
+.block { display: grid; gap: 8px; }
+.block h4 { margin: 0; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+table.wire { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); border-radius: 8px; overflow: hidden; }
+table.wire td, table.wire th { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+table.wire th { font-size: 12px; color: var(--muted); font-weight: 500; }
+table.wire tr:last-child td { border-bottom: 0; }
+table.wire .pin { font-family: var(--f-mono); white-space: nowrap; color: var(--copper); font-weight: 600; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+ul.parts { margin: 0; padding-left: 18px; }
+.note { font-size: 13.5px; border-left: 3px solid var(--warn); padding: 6px 12px; color: var(--ink); background: color-mix(in srgb, var(--warn) 9%, transparent); border-radius: 0 6px 6px 0; }
+.check {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--r);
+  background: var(--surface); border: 1px solid var(--line); cursor: pointer; font-weight: 500;
+}
+.check input { width: 20px; height: 20px; accent-color: var(--ok); }
+.progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.bar { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; max-width: 260px; }
+.bar i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .3s; }
+
+/* 핀맵 */
+.boardwrap { position: sticky; top: 64px; display: grid; gap: 8px; }
+@media (max-width: 760px) { .boardwrap { position: static; } }
+.board { background: var(--board); color: var(--board-ink); border-radius: 12px; padding: 14px 10px; }
+.board-cap { display: flex; justify-content: space-between; font: 600 10.5px var(--f-mono); letter-spacing: .1em; opacity: .7; padding: 0 6px 8px; }
+.header40 { display: grid; grid-template-columns: 1fr 22px 22px 1fr; gap: 3px 6px; align-items: center; }
+.plabel { font: 11px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }
+.plabel.l { text-align: right; }
+.plabel.hl { opacity: 1; color: #ffd7b0; font-weight: 600; }
+.pinbtn {
+  width: 22px; height: 22px; border-radius: 4px; border: 0; padding: 0; cursor: pointer;
+  font: 600 9px var(--f-mono); color: #0b1f14; display: grid; place-items: center;
+}
+.pinbtn.sq { border-radius: 3px; }
+.pinbtn:not(.sq) { border-radius: 50%; }
+.k-gpio { background: #c9d6cd; }
+.k-3v3 { background: #f0b65a; }
+.k-5v { background: #e2584f; color: #fff; }
+.k-gnd { background: #3b3f3c; color: #e8e8e8; }
+.k-id { background: #8d9a91; }
+.pinbtn.hl { box-shadow: 0 0 0 2px var(--board), 0 0 0 4px #ffb46e; transform: scale(1.12); }
+.pinbtn.sel { box-shadow: 0 0 0 2px var(--board), 0 0 0 4px #fff; }
+.pininfo { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; min-height: 64px; }
+.pininfo b { font-family: var(--f-mono); }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+
+/* 문제 해결 */
+.faq { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+summary { padding: 13px 16px; cursor: pointer; font-weight: 500; }
+details[open] summary { border-bottom: 1px solid var(--line); }
+details .ans { padding: 12px 16px 16px; display: grid; gap: 10px; color: var(--ink); }
+details .ans p { color: var(--muted); }
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.rule { padding: 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); display: grid; gap: 4px; }
+.rule b { font-size: 14.5px; }
+.rule span { font-size: 13.5px; color: var(--muted); }
+
+footer { color: var(--muted); font-size: 13px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px);
+  background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 13.5px;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 20;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>파이 실습실</h1>
+      <span class="tag">RASPBERRY PI × CLAUDE CODE × CHROMEBOOK</span>
+    </div>
+    <p class="lede">크롬북에서 Claude Code에게 코드를 부탁하고, SSH로 라즈베리파이에 보내 실행해 봅니다. 배선, 프롬프트, 예시 코드, 실행 명령이 실습마다 한 화면에 있습니다.</p>
+    <div class="flow" aria-label="작업 흐름">
+      <span>크롬북 Linux</span><i>→</i><span>claude 에게 요청</span><i>→</i><span>scp 전송</span><i>→</i><span>ssh 실행</span><i>→</i><span>LED가 켜짐</span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="섹션">
+  <div class="wrap">
+    <a href="#setup" class="on">준비</a>
+    <a href="#labs">실습</a>
+    <a href="#safety">안전 규칙</a>
+    <a href="#trouble">문제 해결</a>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+
+    <section id="setup">
+      <div class="sec-head">
+        <span class="eyebrow">처음 한 번</span>
+        <h2>크롬북과 파이 연결하기</h2>
+        <p>아래에 내 파이의 주소와 사용자 이름을 넣으면 페이지의 모든 명령어에 자동으로 들어갑니다.</p>
+      </div>
+
+      <div class="conn">
+        <div class="conn-row">
+          <div class="field">
+            <label for="pi-user">파이 사용자 이름</label>
+            <input id="pi-user" value="pi" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="pi-host">파이 IP 주소</label>
+            <input id="pi-host" value="192.168.0.23" autocomplete="off" spellcheck="false" inputmode="decimal">
+          </div>
+        </div>
+        <p class="hint">IP는 파이 화면에서 <code>hostname -I</code>를 실행하거나 공유기 관리 페이지에서 확인합니다. 예시 값이 들어 있습니다.</p>
+      </div>
+
+      <div class="steps" id="steps"></div>
+    </section>
+
+    <section id="labs">
+      <div class="sec-head">
+        <span class="eyebrow">실습 6개 · 쉬운 순서</span>
+        <h2>실습</h2>
+        <div class="progress"><span id="prog-txt">0 / 6 완료</span><div class="bar"><i id="prog-bar"></i></div></div>
+      </div>
+      <div class="picker" id="picker" role="tablist" aria-label="실습 선택"></div>
+      <div class="lab">
+        <aside class="boardwrap" aria-label="GPIO 핀맵">
+          <div class="board">
+            <div class="board-cap"><span>홀수 핀</span><span>40핀 헤더</span><span>짝수 핀</span></div>
+            <div class="header40" id="header40"></div>
+          </div>
+          <div class="pininfo" id="pininfo">핀을 누르면 설명이 나옵니다. 주황 테두리는 이번 실습에서 쓰는 핀입니다.</div>
+          <div class="legend">
+            <span><i class="k-3v3"></i>3.3V</span><span><i class="k-5v"></i>5V</span><span><i class="k-gnd"></i>GND</span><span><i class="k-gpio"></i>GPIO</span>
+          </div>
+        </aside>
+        <div class="lab-main" id="lab"></div>
+      </div>
+    </section>
+
+    <section id="safety">
+      <div class="sec-head">
+        <span class="eyebrow">부품을 지키는 법</span>
+        <h2>안전 규칙</h2>
+      </div>
+      <div class="rules">
+        <div class="rule"><b>GPIO는 3.3V까지만</b><span>5V 신호를 GPIO에 바로 넣으면 파이가 고장 납니다. 초음파 센서의 ECHO처럼 5V가 나오는 핀은 저항으로 나눠서 연결합니다.</span></div>
+        <div class="rule"><b>LED에는 저항</b><span>LED마다 220~330Ω 저항을 직렬로 답니다. 긴 다리(+)가 GPIO 쪽, 짧은 다리(−)가 GND 쪽입니다.</span></div>
+        <div class="rule"><b>배선은 전원 끄고</b><span><code>sudo poweroff</code> 후 초록 불이 멈추면 선을 바꿉니다. 켠 채로 꽂다가 5V와 GND가 닿으면 위험합니다.</span></div>
+        <div class="rule"><b>핀 번호를 두 번 확인</b><span>코드의 숫자는 BCM 번호(GPIO17), 보드의 위치는 물리 번호(11번)입니다. 둘을 헷갈리는 일이 가장 흔합니다.</span></div>
+      </div>
+    </section>
+
+    <section id="trouble">
+      <div class="sec-head">
+        <span class="eyebrow">막혔을 때</span>
+        <h2>문제 해결</h2>
+        <p>오류 메시지를 그대로 복사해 Claude Code에 붙여 넣고 "이 오류를 고쳐줘"라고 해도 됩니다.</p>
+      </div>
+      <div class="faq" id="faq"></div>
+    </section>
+
+    <footer>예시 코드는 Raspberry Pi OS(Bookworm)와 파이썬 gpiozero 라이브러리 기준입니다. 진행 상황과 입력한 주소는 이 브라우저에만 저장됩니다.</footer>
+  </div>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  const $ = s => document.querySelector(s);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  let USER = store.get('pi.user', 'pi');
+  let HOST = store.get('pi.host', '192.168.0.23');
+  const fill = s => s.replaceAll('{U}', USER).replaceAll('{H}', HOST);
+
+  // ---------- 핀 데이터 (물리 번호 → [이름, 종류, 설명]) ----------
+  const PINS = {
+    1:['3V3','3v3','3.3V 전원 출력'], 2:['5V','5v','5V 전원 출력. GPIO에 직접 연결 금지'],
+    3:['GPIO2','gpio','I2C SDA'], 4:['5V','5v','5V 전원 출력'],
+    5:['GPIO3','gpio','I2C SCL'], 6:['GND','gnd','접지(0V)'],
+    7:['GPIO4','gpio','일반 입출력 (1-Wire 센서에 자주 씀)'], 8:['GPIO14','gpio','UART TXD'],
+    9:['GND','gnd','접지(0V)'], 10:['GPIO15','gpio','UART RXD'],
+    11:['GPIO17','gpio','일반 입출력'], 12:['GPIO18','gpio','하드웨어 PWM 가능'],
+    13:['GPIO27','gpio','일반 입출력'], 14:['GND','gnd','접지(0V)'],
+    15:['GPIO22','gpio','일반 입출력'], 16:['GPIO23','gpio','일반 입출력'],
+    17:['3V3','3v3','3.3V 전원 출력'], 18:['GPIO24','gpio','일반 입출력'],
+    19:['GPIO10','gpio','SPI MOSI'], 20:['GND','gnd','접지(0V)'],
+    21:['GPIO9','gpio','SPI MISO'], 22:['GPIO25','gpio','일반 입출력'],
+    23:['GPIO11','gpio','SPI SCLK'], 24:['GPIO8','gpio','SPI CE0'],
+    25:['GND','gnd','접지(0V)'], 26:['GPIO7','gpio','SPI CE1'],
+    27:['ID_SD','id','HAT 인식용. 실습에 쓰지 않음'], 28:['ID_SC','id','HAT 인식용. 실습에 쓰지 않음'],
+    29:['GPIO5','gpio','일반 입출력'], 30:['GND','gnd','접지(0V)'],
+    31:['GPIO6','gpio','일반 입출력'], 32:['GPIO12','gpio','하드웨어 PWM 가능'],
+    33:['GPIO13','gpio','하드웨어 PWM 가능'], 34:['GND','gnd','접지(0V)'],
+    35:['GPIO19','gpio','일반 입출력'], 36:['GPIO16','gpio','일반 입출력'],
+    37:['GPIO26','gpio','일반 입출력'], 38:['GPIO20','gpio','일반 입출력'],
+    39:['GND','gnd','접지(0V)'], 40:['GPIO21','gpio','일반 입출력']
+  };
+
+  // ---------- 준비 단계 ----------
+  const STEPS = [
+    { t: '크롬북에서 Linux 개발 환경 켜기',
+      d: '설정 → 정보 → 개발자 → Linux 개발 환경 → 사용 설정. 설치가 끝나면 터미널 앱 → penguin 을 눌러 Linux 명령창을 엽니다. 터미널 앱은 크롬OS 버전에 따라 런처에 바로 보이거나 "Linux 앱" 폴더 안에 있습니다. 둘 다 없으면 런처 검색에 "터미널" 또는 "Terminal"을 입력하거나, 크롬 주소창에 chrome-untrusted://terminal 을 입력하세요. Ctrl+Alt+T로 열리는 crosh 창에서는 ssh와 claude가 동작하지 않습니다. (학교 관리 기기는 관리자가 Linux 기능을 막아 두었을 수 있습니다.)' },
+    { t: 'Claude Code 설치하고 로그인',
+      d: '터미널에서 아래 명령을 실행한 뒤, 작업 폴더를 만들고 claude를 실행해 로그인합니다.',
+      code: 'curl -fsSL https://claude.ai/install.sh | bash\nmkdir -p ~/pi-labs && cd ~/pi-labs\nclaude' },
+    { t: '라즈베리파이 SD카드 준비',
+      d: 'Raspberry Pi Imager로 Raspberry Pi OS를 굽습니다. "설정 편집"에서 사용자 이름·비밀번호, Wi-Fi, SSH 사용을 켜 두세요. 크롬북과 같은 Wi-Fi에 연결되어야 합니다.' },
+    { t: 'SSH 키 등록 (비밀번호 없이 접속)',
+      d: '한 번만 하면 Claude Code가 파이에 파일을 보내고 실행할 때 비밀번호를 묻지 않습니다.',
+      code: 'ssh-keygen -t ed25519\nssh-copy-id {U}@{H}\nssh {U}@{H} "mkdir -p ~/labs && python3 -c \'import gpiozero; print(\\"gpiozero OK\\")\'"' },
+    { t: 'Claude Code에 작업 방식 알려 주기',
+      d: '~/pi-labs 폴더에서 claude를 실행하고 아래 문장을 붙여 넣으세요. CLAUDE.md에 저장되어 다음부터는 매번 설명하지 않아도 됩니다.',
+      prompt: '이 폴더는 라즈베리파이 실습용이야. CLAUDE.md를 만들어서 다음 규칙을 적어줘: 파이 주소는 {U}@{H}, 코드는 Python 3과 gpiozero로 작성, 핀 번호는 BCM 번호 사용, 파일을 만들면 scp로 {U}@{H}:~/labs/ 에 복사하고 ssh -t 로 실행, 주석은 한국어로.' }
+  ];
+
+  // ---------- 실습 ----------
+  const LABS = [
+    { id: 'blink', name: 'LED 깜빡이기', lv: '입문', time: '20분',
+      goal: 'GPIO 출력의 기본. 코드 한 줄로 LED를 켜고 끕니다.',
+      parts: ['LED 1개', '330Ω 저항 1개', '브레드보드, 점퍼선 2개'],
+      pins: { 11: 'LED 긴 다리(+) ← 330Ω 저항', 6: 'LED 짧은 다리(−)' },
+      prompt: 'GPIO17에 연결된 LED를 0.5초 간격으로 깜빡이는 blink.py를 만들어줘. Ctrl+C로 멈추면 LED가 꺼지게 하고, 파이에 복사해서 실행해줘.',
+      file: 'blink.py',
+      code: `from gpiozero import LED
+from time import sleep
+
+led = LED(17)          # BCM 17번 = 물리 11번 핀
+
+try:
+    while True:
+        led.on()
+        sleep(0.5)
+        led.off()
+        sleep(0.5)
+except KeyboardInterrupt:
+    led.off()          # Ctrl+C로 멈추면 끄기`,
+      challenge: '모스 부호로 SOS(··· ––– ···)를 깜빡이게 Claude에게 바꿔 달라고 해 보세요.' },
+
+    { id: 'button', name: '버튼으로 LED', lv: '입문', time: '25분',
+      goal: 'GPIO 입력. 버튼을 누르는 동안만 LED가 켜집니다.',
+      parts: ['LED 1개, 330Ω 저항', '택트 스위치 1개', '점퍼선 4개'],
+      pins: { 11: 'LED(+) ← 330Ω 저항', 6: 'LED(−)', 37: '버튼 한쪽 다리', 39: '버튼 반대쪽 다리' },
+      note: '버튼은 GPIO와 GND 사이에 연결합니다. gpiozero가 내부 풀업 저항을 켜 주므로 추가 저항이 필요 없습니다.',
+      prompt: 'GPIO26의 버튼을 누르고 있는 동안 GPIO17의 LED가 켜지는 button_led.py를 만들어줘. 버튼을 누를 때마다 누른 횟수도 터미널에 출력해줘. 파이에서 실행해줘.',
+      file: 'button_led.py',
+      code: `from gpiozero import LED, Button
+from signal import pause
+
+led = LED(17)
+button = Button(26)    # 내부 풀업 사용, GND와 연결
+count = 0
+
+def pressed():
+    global count
+    count += 1
+    led.on()
+    print(f"눌림 {count}번")
+
+button.when_pressed = pressed
+button.when_released = led.off
+pause()                # 프로그램이 끝나지 않게 대기`,
+      challenge: '한 번 누르면 켜지고 다시 누르면 꺼지는 토글 스위치로 바꿔 보세요.' },
+
+    { id: 'pwm', name: 'LED 밝기 조절', lv: '기초', time: '20분',
+      goal: 'PWM(펄스 폭 변조)으로 LED가 숨 쉬듯 서서히 밝아지고 어두워집니다.',
+      parts: ['LED 1개, 330Ω 저항', '점퍼선 2개'],
+      pins: { 12: 'LED(+) ← 330Ω 저항 (GPIO18)', 14: 'LED(−)' },
+      prompt: 'GPIO18의 LED가 1초 동안 밝아지고 1초 동안 어두워지기를 반복하는 breathe.py를 gpiozero PWMLED로 만들어줘. 그리고 PWM이 무엇인지 중학생이 이해할 수 있게 세 줄로 설명해줘.',
+      file: 'breathe.py',
+      code: `from gpiozero import PWMLED
+from signal import pause
+
+led = PWMLED(18)       # 0.0(꺼짐) ~ 1.0(최대 밝기)
+
+led.pulse(fade_in_time=1, fade_out_time=1)
+pause()`,
+      challenge: '터미널에 0~100 숫자를 입력하면 그 밝기(%)로 바뀌게 만들어 보세요.' },
+
+    { id: 'traffic', name: '신호등', lv: '기초', time: '30분',
+      goal: 'LED 3개를 순서대로 제어합니다. 반복문과 시간 제어 연습입니다.',
+      parts: ['빨강·노랑·초록 LED 각 1개', '330Ω 저항 3개', '점퍼선 4개'],
+      pins: { 11: '빨강 LED(+) (GPIO17)', 13: '노랑 LED(+) (GPIO27)', 15: '초록 LED(+) (GPIO22)', 9: 'LED 3개의 (−) 공통' },
+      note: 'LED 세 개의 짧은 다리를 브레드보드의 파란(−) 줄에 모으고, 그 줄을 GND 한 곳에 연결하면 선이 줄어듭니다.',
+      prompt: '빨강 GPIO17, 노랑 GPIO27, 초록 GPIO22로 신호등을 만드는 traffic.py를 gpiozero TrafficLights로 작성해줘. 초록 5초 → 노랑 2초 → 빨강 5초를 반복하고, 지금 상태를 터미널에 표시해줘.',
+      file: 'traffic.py',
+      code: `from gpiozero import TrafficLights
+from time import sleep
+
+lights = TrafficLights(17, 27, 22)   # 빨강, 노랑, 초록
+
+while True:
+    print("초록");  lights.green.on();  sleep(5)
+    lights.green.off()
+    print("노랑");  lights.amber.on();  sleep(2)
+    lights.amber.off()
+    print("빨강");  lights.red.on();    sleep(5)
+    lights.red.off()`,
+      challenge: '실습 2의 버튼을 추가해서, 버튼을 누르면 보행자 신호(빨강)로 빨리 바뀌게 해 보세요.' },
+
+    { id: 'sonic', name: '초음파 거리 측정', lv: '중급', time: '40분',
+      goal: 'HC-SR04 센서로 물체까지의 거리를 cm로 잽니다.',
+      parts: ['HC-SR04 초음파 센서', '1kΩ 저항 1개, 2kΩ 저항 1개', '점퍼선 6개'],
+      pins: { 2: 'VCC (5V)', 16: 'TRIG (GPIO23)', 18: 'ECHO → 1kΩ → 이 핀, 이 핀 → 2kΩ → GND', 20: 'GND' },
+      note: 'ECHO 핀은 5V를 내보냅니다. 1kΩ·2kΩ 저항으로 전압을 약 3.3V로 낮추지 않으면 GPIO가 손상될 수 있습니다.',
+      prompt: 'HC-SR04 초음파 센서(TRIG GPIO23, ECHO GPIO24)로 0.5초마다 거리를 cm 단위로 출력하는 distance.py를 만들어줘. 20cm보다 가까우면 "가까워요!"도 같이 출력해줘. ECHO 분압 회로가 왜 필요한지도 짧게 알려줘.',
+      file: 'distance.py',
+      code: `from gpiozero import DistanceSensor
+from time import sleep
+
+sensor = DistanceSensor(echo=24, trigger=23, max_distance=2)
+
+while True:
+    cm = sensor.distance * 100      # distance는 미터 단위
+    msg = "  가까워요!" if cm < 20 else ""
+    print(f"거리: {cm:5.1f} cm{msg}")
+    sleep(0.5)`,
+      challenge: '실습 3의 PWM LED를 연결해서 가까울수록 LED가 밝아지는 주차 센서를 만들어 보세요.' },
+
+    { id: 'web', name: '휴대폰으로 LED 제어', lv: '중급', time: '40분',
+      goal: '파이에 작은 웹 서버(Flask)를 띄우고, 같은 Wi-Fi의 휴대폰 브라우저에서 LED를 켜고 끕니다.',
+      parts: ['실습 1의 LED 회로 그대로', '같은 Wi-Fi에 연결된 휴대폰'],
+      pins: { 11: 'LED(+) ← 330Ω 저항', 6: 'LED(−)' },
+      prompt: 'Flask로 파이에서 5000번 포트에 웹 서버를 여는 web_led.py를 만들어줘. 휴대폰 화면에 맞는 큰 "켜기", "끄기" 버튼과 현재 LED 상태를 보여 주고, GPIO17의 LED를 제어해야 해. 파이에 flask가 없으면 sudo apt install python3-flask로 설치하고 실행해줘.',
+      file: 'web_led.py',
+      run: 'sudo apt install -y python3-flask',
+      open: 'http://{H}:5000',
+      code: `from flask import Flask, redirect
+from gpiozero import LED
+
+app = Flask(__name__)
+led = LED(17)
+
+PAGE = """<!doctype html>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<h1 style="font-family:sans-serif">LED: {state}</h1>
+<a href="/on"  style="font-size:2em">켜기</a> &nbsp;
+<a href="/off" style="font-size:2em">끄기</a>"""
+
+@app.route("/")
+def home():
+    return PAGE.format(state="켜짐" if led.is_lit else "꺼짐")
+
+@app.route("/on")
+def on():
+    led.on();  return redirect("/")
+
+@app.route("/off")
+def off():
+    led.off(); return redirect("/")
+
+app.run(host="0.0.0.0", port=5000)`,
+      challenge: '실습 5의 거리 값을 웹 페이지에 2초마다 새로고침해서 보여 주게 바꿔 보세요.' }
+  ];
+
+  const FAQ = [
+    { q: 'ssh: Could not resolve hostname raspberrypi.local',
+      a: '크롬북의 Linux 환경은 .local 이름을 찾지 못하는 경우가 많습니다. 이름 대신 IP 주소로 접속하세요.', code: 'ssh {U}@{H}' },
+    { q: 'ssh: connect to host ... Connection timed out / refused',
+      a: '크롬북과 파이가 같은 Wi-Fi인지, 파이 전원이 켜졌는지, Imager에서 SSH를 켰는지 확인합니다. 학교 Wi-Fi는 기기끼리 통신을 막는 경우가 있어 휴대폰 핫스팟으로 둘 다 연결하면 해결되기도 합니다.' },
+    { q: 'LED가 전혀 켜지지 않아요',
+      a: 'LED 방향(긴 다리가 GPIO 쪽)을 먼저 확인하세요. 그다음 물리 번호와 BCM 번호를 헷갈리지 않았는지 위 핀맵에서 확인합니다. 아래 명령으로 코드 없이 LED만 시험할 수 있습니다.', code: 'ssh -t {U}@{H} "python3 -c \'from gpiozero import LED; from time import sleep; LED(17).on(); sleep(3)\'"' },
+    { q: 'GPIO busy / lgpio.error: GPIO busy',
+      a: '이전에 실행한 프로그램이 아직 핀을 쓰고 있습니다. 해당 프로그램을 끄거나 아래 명령으로 정리합니다.', code: 'ssh {U}@{H} "pkill -f labs/"' },
+    { q: '휴대폰에서 http://...:5000 이 열리지 않아요',
+      a: '휴대폰이 파이와 같은 Wi-Fi에 있는지 확인하고, 코드에 host="0.0.0.0"이 있는지 봅니다. 주소는 https가 아니라 http입니다.' },
+    { q: 'Claude Code가 ssh 실행 전에 매번 허락을 물어요',
+      a: '처음에는 "Yes, and don\'t ask again"을 고르면 같은 종류의 명령은 다시 묻지 않습니다. 파일을 지우는 명령처럼 위험해 보이는 요청은 내용을 읽고 허락하세요.' }
+  ];
+
+  // ---------- 공통 렌더러 ----------
+  const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1500); };
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); toast('복사했습니다'); return; } catch (e) {}
+    try {
+      const ta = el('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove();
+      toast(ok ? '복사했습니다' : '길게 눌러 직접 복사하세요');
+    } catch (e) { toast('길게 눌러 직접 복사하세요'); }
+  }
+  function codeBox(tpl, label) {
+    const box = el('div', 'code' + (label ? ' has-label' : ''));
+    if (label) box.appendChild(el('span', 'label', label));
+    const pre = el('pre'); const c = el('code'); c.dataset.tpl = tpl; c.textContent = fill(tpl);
+    pre.appendChild(c); box.appendChild(pre);
+    const b = el('button', 'copy', '복사'); b.type = 'button';
+    b.addEventListener('click', () => copyText(c.textContent));
+    box.appendChild(b); return box;
+  }
+  function promptBox(tpl) {
+    const box = el('div', 'prompt'); const p = el('p');
+    p.appendChild(el('span', 'who', 'CLAUDE CODE에 붙여 넣기'));
+    const s = el('span'); s.dataset.tpl = tpl; s.textContent = fill(tpl); p.appendChild(s);
+    box.appendChild(p);
+    const b = el('button', 'copy', '복사'); b.type = 'button';
+    b.addEventListener('click', () => copyText(s.textContent));
+    box.appendChild(b); return box;
+  }
+  const refill = () => document.querySelectorAll('[data-tpl]').forEach(n => n.textContent = fill(n.dataset.tpl));
+
+  // 준비 단계
+  const stepsEl = $('#steps');
+  STEPS.forEach((s, i) => {
+    const row = el('div', 'step'); row.appendChild(el('div', 'n', String(i + 1)));
+    const body = el('div', 'body'); body.appendChild(el('h3', null, s.t)); body.appendChild(el('p', null, s.d));
+    if (s.code) body.appendChild(codeBox(s.code));
+    if (s.prompt) body.appendChild(promptBox(s.prompt));
+    row.appendChild(body); stepsEl.appendChild(row);
+  });
+
+  // 핀맵
+  const hdr = $('#header40'); const pinBtns = {}; const pinLabels = {};
+  for (let r = 0; r < 20; r++) {
+    const odd = r * 2 + 1, even = odd + 1;
+    const mk = n => {
+      const [name, kind, desc] = PINS[n];
+      const b = el('button', 'pinbtn k-' + kind + (n === 1 ? ' sq' : ''), String(n));
+      b.type = 'button'; b.setAttribute('aria-label', `${n}번 핀 ${name}`);
+      b.addEventListener('click', () => selectPin(n)); pinBtns[n] = b; return b;
+    };
+    const lL = el('span', 'plabel l', PINS[odd][0]); const lR = el('span', 'plabel', PINS[even][0]);
+    pinLabels[odd] = lL; pinLabels[even] = lR;
+    hdr.append(lL, mk(odd), mk(even), lR);
+  }
+  let current = null;
+  function selectPin(n) {
+    Object.values(pinBtns).forEach(b => b.classList.remove('sel')); pinBtns[n].classList.add('sel');
+    const [name, , desc] = PINS[n]; const info = $('#pininfo'); info.textContent = '';
+    const b = el('b', null, `${n}번 · ${name}`); info.append(b, document.createTextNode(` — ${desc}`));
+    const use = current && current.pins[n];
+    if (use) { info.append(el('br')); const s = el('span'); s.style.color = 'var(--copper)'; s.textContent = `이번 실습: ${use}`; info.append(s); }
+  }
+
+  // 실습
+  let done = store.get('pi.done', {});
+  const picker = $('#picker');
+  function updateProgress() {
+    const n = LABS.filter(l => done[l.id]).length;
+    $('#prog-txt').textContent = `${n} / ${LABS.length} 완료`;
+    $('#prog-bar').style.width = (n / LABS.length * 100) + '%';
+    picker.querySelectorAll('.chip').forEach((c, i) => {
+      c.querySelector('.st').textContent = done[LABS[i].id] ? '✓ 완료' : LABS[i].lv;
+      c.querySelector('.st').classList.toggle('done', !!done[LABS[i].id]);
+    });
+  }
+  LABS.forEach((l, i) => {
+    const c = el('button', 'chip'); c.type = 'button'; c.setAttribute('role', 'tab');
+    const sm = el('small'); sm.append(el('span', null, `실습 ${i + 1}`), el('span', 'st', l.lv));
+    c.append(sm, el('b', null, l.name));
+    c.addEventListener('click', () => showLab(i)); picker.appendChild(c);
+  });
+
+  function showLab(i) {
+    const l = LABS[i]; current = l; store.set('pi.lab', i);
+    picker.querySelectorAll('.chip').forEach((c, j) => { c.classList.toggle('on', i === j); c.setAttribute('aria-selected', i === j); });
+    Object.entries(pinBtns).forEach(([n, b]) => { b.classList.toggle('hl', !!l.pins[n]); pinLabels[n].classList.toggle('hl', !!l.pins[n]); b.classList.remove('sel'); });
+    $('#pininfo').textContent = '핀을 누르면 설명이 나옵니다. 주황 테두리는 이번 실습에서 쓰는 핀입니다.';
+
+    const m = $('#lab'); m.textContent = '';
+    const head = el('div', 'lab-title');
+    const meta = el('div', 'meta'); meta.append(el('span', 'pill lv', l.lv), el('span', 'pill', `약 ${l.time}`), el('span', 'pill mono', l.file));
+    head.append(el('h3', null, `${i + 1}. ${l.name}`), el('p', null, l.goal), meta);
+    m.appendChild(head);
+
+    const parts = el('div', 'block'); parts.appendChild(el('h4', null, '준비물'));
+    const ul = el('ul', 'parts'); l.parts.forEach(p => ul.appendChild(el('li', null, p))); parts.appendChild(ul);
+    m.appendChild(parts);
+
+    const wire = el('div', 'block'); wire.appendChild(el('h4', null, '배선 — 전원을 끄고 연결하세요'));
+    const tw = el('div', 'tbl'); const t = el('table', 'wire');
+    const thr = el('tr'); thr.append(el('th', null, '물리 핀'), el('th', null, '이름'), el('th', null, '연결할 곳')); t.appendChild(thr);
+    Object.entries(l.pins).forEach(([n, what]) => {
+      const tr = el('tr'); tr.append(el('td', 'pin', n + '번'), el('td', 'mono', PINS[n][0]), el('td', null, what)); t.appendChild(tr);
+    });
+    tw.appendChild(t); wire.appendChild(tw);
+    if (l.note) wire.appendChild(el('p', 'note', l.note));
+    m.appendChild(wire);
+
+    const pr = el('div', 'block'); pr.appendChild(el('h4', null, '1단계 · Claude Code에게 요청'));
+    pr.appendChild(promptBox(l.prompt)); m.appendChild(pr);
+
+    const cd = el('div', 'block'); cd.appendChild(el('h4', null, '2단계 · 결과 코드와 비교해 보기 (예시)'));
+    cd.appendChild(codeBox(l.code, l.file)); m.appendChild(cd);
+
+    const rn = el('div', 'block'); rn.appendChild(el('h4', null, '3단계 · 직접 실행할 때 (크롬북 터미널)'));
+    let cmd = '';
+    if (l.run) cmd += `ssh {U}@{H} "${l.run}"\n`;
+    cmd += `scp ${l.file} {U}@{H}:~/labs/\nssh -t {U}@{H} "python3 ~/labs/${l.file}"`;
+    rn.appendChild(codeBox(cmd));
+    if (l.open) { const p = el('p', 'hint'); p.append('그다음 휴대폰 브라우저에서 '); const c = el('code'); c.dataset.tpl = l.open; c.textContent = fill(l.open); p.append(c, ' 을 엽니다.'); rn.appendChild(p); }
+    rn.appendChild(el('p', 'hint', '멈출 때는 Ctrl+C를 누릅니다.'));
+    m.appendChild(rn);
+
+    const ch = el('div', 'block'); ch.appendChild(el('h4', null, '도전 과제'));
+    ch.appendChild(el('p', null, l.challenge)); m.appendChild(ch);
+
+    const lab = el('label', 'check'); const cb = el('input'); cb.type = 'checkbox'; cb.id = 'done-' + l.id; cb.checked = !!done[l.id];
+    cb.addEventListener('change', () => { done[l.id] = cb.checked; store.set('pi.done', done); updateProgress(); if (cb.checked) toast(`실습 ${i + 1} 완료!`); });
+    lab.append(cb, document.createTextNode('이 실습을 끝냈어요')); m.appendChild(lab);
+  }
+
+  // 문제 해결
+  const faq = $('#faq');
+  FAQ.forEach(f => {
+    const d = el('details'); d.appendChild(el('summary', null, f.q));
+    const a = el('div', 'ans'); a.appendChild(el('p', null, f.a)); if (f.code) a.appendChild(codeBox(f.code));
+    d.appendChild(a); faq.appendChild(d);
+  });
+
+  // 주소 입력
+  const uI = $('#pi-user'), hI = $('#pi-host'); uI.value = USER; hI.value = HOST;
+  uI.addEventListener('input', () => { USER = uI.value.trim() || 'pi'; store.set('pi.user', USER); refill(); });
+  hI.addEventListener('input', () => { HOST = hI.value.trim() || '192.168.0.23'; store.set('pi.host', HOST); refill(); });
+
+  // 탭 하이라이트
+  const links = [...document.querySelectorAll('nav.tabs a')];
+  const secs = links.map(a => document.querySelector(a.getAttribute('href')));
+  const onScroll = () => {
+    let idx = 0; secs.forEach((s, i) => { if (s.getBoundingClientRect().top < 120) idx = i; });
+    links.forEach((a, i) => a.classList.toggle('on', i === idx));
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+
+  const start = Math.min(Math.max(+store.get('pi.lab', 0) || 0, 0), LABS.length - 1);
+  showLab(start); updateProgress();
+})();
+</script>
